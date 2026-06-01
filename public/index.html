@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Sistema — Login</title>
+    <link rel="stylesheet" href="./style/style.css">
+    <link rel="stylesheet icon" href="imagens/image-editor-1780260291978 - Copia.png">
+</head>
+<body>
+
+<div class="fundo-gradiente">
+    <div class="caixa-login" id="caixaLogin">
+
+        <div class="logo">📦</div>
+        <h2>ERP Sistema</h2>
+        <p class="subtitulo">Gestão de Estoque e Compras</p>
+
+        <!-- aparece quando erra a senha -->
+        <div class="alerta-login" id="alertaErro">
+            ⚠️ Login ou senha incorretos. Tente novamente.
+        </div>
+
+        <form id="loginForm" novalidate>
+
+            <div class="campo">
+                <label for="usuario">Login</label>
+                <input type="text" id="usuario"
+                       placeholder="admin"
+                       autocomplete="username">
+                <span class="erro-msg" id="erroLogin">
+                    Informe um login válido.
+                </span>
+            </div>
+
+            <div class="campo">
+                <label for="senha">Senha</label>
+                <input type="password" id="senha"
+                       placeholder="••••••••"
+                       autocomplete="current-password">
+                <span class="erro-msg" id="erroSenha">
+                    A senha precisa ter pelo menos 6 caracteres.
+                </span>
+            </div>
+
+            <div class="opcoes-form">
+                <label class="lembrar">
+                    <input type="checkbox" id="lembrarMe"> Lembrar-me
+                </label>
+                <a href="#" id="linkEsqueceu">Esqueceu a senha?</a>
+            </div>
+
+            <button type="submit" class="btn-entrar" id="btnEntrar">
+                <span id="txtBotao">Entrar</span>
+                <span class="spinner" id="spinner"></span>
+            </button>
+
+            <div class="caixa-demo">
+                🔑 Acesso demo — Login: <strong>admin</strong>
+                &nbsp;|&nbsp; Senha: <strong>123456</strong>
+            </div>
+
+        </form>
+
+        <p class="versao">v1.0.0 &mdash; ERP Sistema &copy; 2025</p>
+    </div>
+</div>
+
+<script>
+    // se já tiver sessão salva, vai direto pro dashboard
+    (function() {
+        var s = localStorage.getItem('erp_usuario')
+             || sessionStorage.getItem('erp_usuario');
+        if (s) window.location.href = 'dashboard.html';
+    })();
+
+    // credencial de acesso (demo)
+    var CRED_EMAIL = 'admin@erp.com';
+    var CRED_SENHA = '123456';
+
+    var form       = document.getElementById('loginForm');
+    var inpEmail   = document.getElementById('usuario');
+    var inpSenha   = document.getElementById('senha');
+    var btnEntrar  = document.getElementById('btnEntrar');
+    var spinner    = document.getElementById('spinner');
+    var txtBotao   = document.getElementById('txtBotao');
+    var alertaErro = document.getElementById('alertaErro');
+
+    // marca campo como válido ou inválido visualmente
+    function marcarCampo(input, msgEl, temErro) {
+        if (temErro) {
+            input.classList.add('invalido');
+            input.classList.remove('valido');
+            msgEl.style.display = 'block';
+        } else {
+            input.classList.remove('invalido');
+            input.classList.add('valido');
+            msgEl.style.display = 'none';
+        }
+    }
+
+    // valida ao sair do campo
+    inpEmail.addEventListener('blur', function() {
+        marcarCampo(this, document.getElementById('erroLogin'),
+                    !emailOk(this.value));
+    });
+
+    inpSenha.addEventListener('blur', function() {
+        marcarCampo(this, document.getElementById('erroSenha'),
+                    this.value.length < 6);
+    });
+
+    // esconde o alerta enquanto o usuário digita
+    inpEmail.addEventListener('input', function() {
+        alertaErro.style.display = 'none';
+    });
+    inpSenha.addEventListener('input', function() {
+        alertaErro.style.display = 'none';
+    });
+
+    // link esqueceu a senha
+    document.getElementById('linkEsqueceu').addEventListener('click', function(e) {
+        e.preventDefault();
+        alert('Entre em contato com o administrador do sistema\npara redefinir sua senha.');
+    });
+
+    // submit do formulário
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        var email = inpEmail.value.trim();
+        var senha = inpSenha.value;
+        var temErro = false;
+
+        // valida os campos antes de tentar
+        if (!email) {
+            marcarCampo(inpEmail, document.getElementById('erroEmail'), true);
+            temErro = true;
+        }
+        if (senha.length < 6) {
+            marcarCampo(inpSenha, document.getElementById('erroSenha'), true);
+            temErro = true;
+        }
+        if (temErro) return;
+
+        // ativa estado de carregamento
+        btnEntrar.disabled       = true;
+        spinner.style.display    = 'inline-block';
+        txtBotao.textContent     = 'Verificando...';
+        alertaErro.style.display = 'none';
+
+        fetch('/produtos/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                login: email,
+                senha: senha
+            })
+        })
+        .then(function(res) {
+            return res.json();
+        })
+        .then(function(data) {
+            if (data.token) {
+                var storage = document.getElementById('lembrarMe').checked
+                    ? localStorage
+                    : sessionStorage;
+
+                storage.setItem('erp_usuario', JSON.stringify({
+                    nome: 'Administrador',
+                    email: email,
+                    perfil: 'admin',
+                    token: data.token
+                }));
+
+                txtBotao.textContent = '✓ Entrando...';
+
+                setTimeout(function() {
+                    window.location.href = 'dashboard.html';
+                }, 400);
+
+            } else {
+                alertaErro.style.display = 'block';
+                btnEntrar.disabled = false;
+                spinner.style.display = 'none';
+                txtBotao.textContent = 'Entrar';
+            }
+        })
+        .catch(function(error) {
+            console.error(error);
+
+            alertaErro.style.display = 'block';
+            btnEntrar.disabled = false;
+            spinner.style.display = 'none';
+            txtBotao.textContent = 'Entrar';
+        });
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Sistema — Estoque</title>
+    <link rel="stylesheet" href="./style/style.css">
+    <link rel="stylesheet icon" href="imagens/image-editor-1780260291978 - Copia.png">
+</head>
+<body>
+
+<div class="aplicacao">
+
+    <header class="cabecalho">
+        <span class="titulo-cabecalho">📦 ERP Sistema</span>
+        <nav class="navegacao">
+            <a href="dashboard.html" class="aba">📊 Dashboard</a>
+            <a href="estoque.html"   class="aba ativo">📦 Estoque</a>
+            <a href="compras.html"   class="aba">🛒 Compras</a>
+            <a href="vendas.html"    class="aba">💰 Vendas</a>
+        </nav>
+        <div class="usuario-cabecalho" id="nomeUsuario">👤 Admin ▾</div>
+    </header>
+
+    <div class="barra-boas-vindas">
+        <div>Gerenciamento de <strong>Estoque</strong></div>
+        <button class="btn-sair" id="btnSair">🚪 Sair</button>
+    </div>
+
+    <!-- KPIs calculados via JS -->
+    <div class="cartoes">
+        <div class="cartao cartao-azul">
+            <div class="cartao-icone">💰</div>
+            <div>
+                <div class="cartao-label">Valor Total em Estoque</div>
+                <div class="cartao-valor" id="kdValorTotal">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-verde">
+            <div class="cartao-icone">📦</div>
+            <div>
+                <div class="cartao-label">Total de Itens</div>
+                <div class="cartao-valor" id="kdTotalItens">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-vermelho">
+            <div class="cartao-icone">⚠️</div>
+            <div>
+                <div class="cartao-label">Abaixo do Mínimo</div>
+                <div class="cartao-valor" id="kdAbaixoMin">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-laranja">
+            <div class="cartao-icone">🏷️</div>
+            <div>
+                <div class="cartao-label">Categorias</div>
+                <div class="cartao-valor" id="kdCategorias">—</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="painel">
+
+        <div class="barra-ferramentas">
+            <input type="text" id="campoBusca" class="input-busca"
+                   placeholder="🔍  Buscar por código, produto ou categoria...">
+            <select id="filtroCategoria" class="select-filtro">
+                <option value="">Todas as categorias</option>
+            </select>
+            <select id="filtroStatus" class="select-filtro">
+                <option value="">Todos os status</option>
+                <option value="critico">Crítico</option>
+                <option value="atencao">Atenção</option>
+                <option value="ok">Normal</option>
+            </select>
+            <button class="btn-novo" id="btnNovoItem">+ Novo Item</button>
+        </div>
+
+        <table class="tabela-dados">
+            <thead>
+                <tr>
+                    <th data-col="codigo"  class="col-ordenavel">CÓDIGO ↕</th>
+                    <th data-col="nome"    class="col-ordenavel">PRODUTO ↕</th>
+                    <th>CATEGORIA</th>
+                    <th data-col="estoque" class="col-ordenavel">ESTOQUE ↕</th>
+                    <th>MÍNIMO</th>
+                    <th data-col="preco"   class="col-ordenavel">PREÇO ↕</th>
+                    <th>STATUS</th>
+                    <th>AÇÕES</th>
+                </tr>
+            </thead>
+            <tbody id="tbEstoque"></tbody>
+        </table>
+
+        <div class="rodape-painel" id="rodapeTabela"></div>
+    </div>
+
+    <!-- modal de cadastro / edição -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-caixa">
+            <div class="modal-cabecalho">
+                <span id="modalTitulo">Novo Item</span>
+                <button class="modal-fechar" id="modalFechar">&times;</button>
+            </div>
+            <div class="modal-corpo">
+                <div class="campo">
+                    <label>Código</label>
+                    <input type="text" id="mCodigo" placeholder="Ex: NB-011">
+                </div>
+                <div class="campo">
+                    <label>Nome do Produto</label>
+                    <input type="text" id="mNome" placeholder="Ex: Notebook Dell Inspiron 15">
+                </div>
+                <div class="campo">
+                    <label>Categoria</label>
+                    <input type="text" id="mCategoria" placeholder="Ex: Informática">
+                </div>
+                <div class="campo">
+                    <label>Estoque Atual</label>
+                    <input type="number" id="mEstoque" placeholder="0" min="0">
+                </div>
+                <div class="campo">
+                    <label>Estoque Mínimo</label>
+                    <input type="number" id="mMinimo" placeholder="0" min="0">
+                </div>
+                <div class="campo">
+                    <label>Preço Unitário (R$)</label>
+                    <input type="number" id="mPreco" placeholder="0.00"
+                           min="0" step="0.01">
+                </div>
+            </div>
+            <div class="modal-rodape">
+                <button class="btn-cancelar" id="btnCancelar">Cancelar</button>
+                <button class="btn-salvar"   id="btnSalvar">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="rodape-app">
+        ERP Sistema &copy; 2025 — Todos os direitos reservados
+    </footer>
+
+</div>
+
+<script>
+    // proteção de rota
+    var sessaoRaw = localStorage.getItem('erp_usuario')
+                || sessionStorage.getItem('erp_usuario');
+    if (!sessaoRaw) window.location.href = 'index.html';
+
+    var usuario = JSON.parse(sessaoRaw || '{}');
+    document.getElementById('nomeUsuario').textContent =
+        '👤 ' + (usuario.nome || 'Admin') + ' ▾';
+
+    document.getElementById('btnSair').addEventListener('click', function() {
+        if (confirm('Deseja sair do sistema?')) {
+            localStorage.removeItem('erp_usuario');
+            sessionStorage.removeItem('erp_usuario');
+            window.location.href = 'index.html';
+        }
+    });
+
+    // // ── base de dados local (localStorage) ───────────────────────
+
+    // var CHAVE = 'erp_estoque';
+
+    // var dadosPadrao = [
+    //     { codigo: 'NB-001',  nome: 'Notebook Dell Inspiron 15', categoria: 'Informática',   estoque: 45,  minimo: 15, preco: 3499.90 },
+    //     { codigo: 'MS-002',  nome: 'Mouse Logitech MX Master',   categoria: 'Periféricos',   estoque: 32,  minimo: 20, preco: 449.90  },
+    //     { codigo: 'TC-003',  nome: 'Teclado Mecânico RGB',       categoria: 'Periféricos',   estoque: 78,  minimo: 25, preco: 699.90  },
+    //     { codigo: 'MN-004',  nome: 'Monitor LG 27" 4K',          categoria: 'Monitores',     estoque: 28,  minimo: 12, preco: 2199.90 },
+    //     { codigo: 'WB-005',  nome: 'Webcam Logitech C920',       categoria: 'Periféricos',   estoque: 64,  minimo: 30, preco: 599.90  },
+    //     { codigo: 'HD-006',  nome: 'Headset HyperX Cloud II',    categoria: 'Áudio',         estoque: 5,   minimo: 15, preco: 549.90  },
+    //     { codigo: 'SSD-007', nome: 'SSD Samsung 1TB',            categoria: 'Armazenamento', estoque: 8,   minimo: 20, preco: 699.90  },
+    //     { codigo: 'RAM-008', nome: 'Memória RAM DDR4 16GB',      categoria: 'Componentes',   estoque: 12,  minimo: 25, preco: 449.90  },
+    //     { codigo: 'HUB-009', nome: 'Hub USB-C 7 Portas',         categoria: 'Acessórios',    estoque: 18,  minimo: 30, preco: 299.90  },
+    //     { codigo: 'CAB-010', nome: 'Cabo HDMI 2.1 3m',           categoria: 'Cabos',         estoque: 156, minimo: 50, preco: 89.90   }
+    // ];
+
+    function carregarDados() {
+        var raw = localStorage.getItem(CHAVE);
+        return raw ? JSON.parse(raw) : dadosPadrao;
+    }
+
+    function salvarDados() {
+        localStorage.setItem(CHAVE, JSON.stringify(produtos));
+    }
+
+    var produtos = [];
+
+    async function carregarProdutosAPI() {
+        const resposta = await fetch('/produtos/produto');
+        const dados = await resposta.json();
+
+        produtos = dados.map(function(p) {
+            return {
+                id_produto: p.id_produto,
+                codigo: String(p.id_produto),
+                nome: p.nome,
+                categoria: 'Geral',
+                estoque: Number(p.quantidade_estoque),
+                minimo: 5,
+                preco: Number(p.preco_unitario)
+            };
+        });
+
+        popularCategorias();
+        atualizarKPIs();
+        filtrarERenderizar();
+    }
+
+    // ── helpers ───────────────────────────────────────────────────
+
+    function moeda(v) {
+        return Number(v).toLocaleString('pt-BR', {
+            style: 'currency', currency: 'BRL'
+        });
+    }
+
+    function getStatus(estoque, minimo) {
+        if (estoque === 0)             return { label: 'Sem Estoque', cls: 'etiqueta-urgente', filtro: 'critico' };
+        if (estoque <= minimo * 0.5)   return { label: 'Crítico',     cls: 'etiqueta-urgente', filtro: 'critico' };
+        if (estoque < minimo)          return { label: 'Atenção',     cls: 'etiqueta-atencao', filtro: 'atencao' };
+        return                                { label: 'Normal',      cls: 'etiqueta-verde',   filtro: 'ok'      };
+    }
+
+    // ── KPIs ──────────────────────────────────────────────────────
+
+    function atualizarKPIs() {
+        var valorTotal = 0;
+        var totalItens = 0;
+        var abaixoMin  = 0;
+        var cats       = {};
+
+        for (var i = 0; i < produtos.length; i++) {
+            var p = produtos[i];
+            valorTotal += p.preco * p.estoque;
+            totalItens += p.estoque;
+            if (p.estoque < p.minimo) abaixoMin++;
+            cats[p.categoria] = true;
+        }
+
+        document.getElementById('kdValorTotal').textContent =
+            moeda(valorTotal);
+        document.getElementById('kdTotalItens').textContent =
+            totalItens.toLocaleString('pt-BR');
+        document.getElementById('kdAbaixoMin').textContent  = abaixoMin;
+        document.getElementById('kdCategorias').textContent =
+            Object.keys(cats).length;
+    }
+
+    // ── filtro de categorias ──────────────────────────────────────
+
+    function popularCategorias() {
+        var sel  = document.getElementById('filtroCategoria');
+        var cats = {};
+        for (var i = 0; i < produtos.length; i++) {
+            cats[produtos[i].categoria] = true;
+        }
+        // remove opções antigas (exceto "Todas")
+        while (sel.options.length > 1) sel.remove(1);
+
+        var lista = Object.keys(cats).sort();
+        for (var i = 0; i < lista.length; i++) {
+            var op = document.createElement('option');
+            op.value = lista[i];
+            op.textContent = lista[i];
+            sel.appendChild(op);
+        }
+    }
+
+    // ── ordenação ─────────────────────────────────────────────────
+
+    var ordemCol = null;
+    var ordemAsc = true;
+
+    document.querySelectorAll('th[data-col]').forEach(function(th) {
+        th.style.cursor = 'pointer';
+        th.addEventListener('click', function() {
+            var col = this.dataset.col;
+            if (ordemCol === col) {
+                ordemAsc = !ordemAsc;
+            } else {
+                ordemCol = col;
+                ordemAsc = true;
+            }
+            filtrarERenderizar();
+        });
+    });
+
+    // ── renderiza tabela ──────────────────────────────────────────
+
+    function renderizarTabela(lista) {
+        var tb = document.getElementById('tbEstoque');
+        tb.innerHTML = '';
+
+        if (lista.length === 0) {
+            tb.innerHTML =
+                '<tr><td colspan="8" style="text-align:center;' +
+                'padding:30px;color:#aaa">Nenhum produto encontrado.</td></tr>';
+            document.getElementById('rodapeTabela').textContent = '';
+            return;
+        }
+
+        for (var i = 0; i < lista.length; i++) {
+            var p   = lista[i];
+            var st  = getStatus(p.estoque, p.minimo);
+            var clsE = st.filtro === 'ok'      ? 'texto-verde'
+                     : st.filtro === 'atencao' ? 'texto-laranja'
+                     : 'texto-vermelho';
+
+            tb.innerHTML +=
+                '<tr>' +
+                '<td><code>' + p.codigo + '</code></td>' +
+                '<td>' + p.nome + '</td>' +
+                '<td><span class="etiqueta-azul">' + p.categoria + '</span></td>' +
+                '<td class="' + clsE + '"><strong>' + p.estoque + '</strong></td>' +
+                '<td>' + p.minimo + '</td>' +
+                '<td>' + moeda(p.preco) + '</td>' +
+                '<td><span class="' + st.cls + '">' + st.label + '</span></td>' +
+                '<td>' +
+                    '<button class="btn-acao btn-editar" data-i="' + i + '">✏️ Editar</button> ' +
+                    '<button class="btn-acao btn-excluir" data-i="' + i + '">🗑️</button>' +
+                '</td>' +
+                '</tr>';
+        }
+
+        // rodapé com total filtrado
+        var totalFiltrado = 0;
+        for (var i = 0; i < lista.length; i++) {
+            totalFiltrado += lista[i].preco * lista[i].estoque;
+        }
+        document.getElementById('rodapeTabela').innerHTML =
+            '<strong>' + lista.length + '</strong> produto(s) exibido(s) &nbsp;|&nbsp;' +
+            ' Valor total: <strong>' + moeda(totalFiltrado) + '</strong>';
+
+        // eventos dos botões de ação
+        var btnsEditar  = document.querySelectorAll('.btn-editar');
+        var btnsExcluir = document.querySelectorAll('.btn-excluir');
+
+        btnsEditar.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                abrirModal('editar', lista[parseInt(this.dataset.i)]);
+            });
+        });
+
+        btnsExcluir.forEach(function(btn) {
+            btn.addEventListener('click', async function() {
+                var prod = lista[parseInt(this.dataset.i)];
+
+                if (confirm('Remover "' + prod.nome + '" do estoque?')) {
+                    try {
+                        await fetch('/produtos/produto/' + prod.id_produto, {
+                            method: 'DELETE'
+                        });
+
+                        await carregarProdutosAPI();
+
+                    } catch (error) {
+                        console.error(error);
+                        alert('Erro ao excluir produto');
+                    }
+                }
+            });
+        });
+    }
+
+    // ── filtrar + ordenar + renderizar ────────────────────────────
+
+    function filtrarERenderizar() {
+        var busca   = document.getElementById('campoBusca').value.toLowerCase();
+        var catSel  = document.getElementById('filtroCategoria').value;
+        var statSel = document.getElementById('filtroStatus').value;
+
+        var lista = [];
+        for (var i = 0; i < produtos.length; i++) {
+            var p = produtos[i];
+            var matchBusca = !busca ||
+                p.codigo.toLowerCase().indexOf(busca) >= 0 ||
+                p.nome.toLowerCase().indexOf(busca) >= 0 ||
+                p.categoria.toLowerCase().indexOf(busca) >= 0;
+            var matchCat  = !catSel  || p.categoria === catSel;
+            var matchStat = !statSel || getStatus(p.estoque, p.minimo).filtro === statSel;
+
+            if (matchBusca && matchCat && matchStat) lista.push(p);
+        }
+
+        // ordenação
+        if (ordemCol) {
+            lista.sort(function(a, b) {
+                var va = a[ordemCol];
+                var vb = b[ordemCol];
+                if (typeof va === 'string') {
+                    va = va.toLowerCase();
+                    vb = vb.toLowerCase();
+                    if (va < vb) return ordemAsc ? -1 : 1;
+                    if (va > vb) return ordemAsc ?  1 : -1;
+                    return 0;
+                }
+                return ordemAsc ? va - vb : vb - va;
+            });
+        }
+
+        renderizarTabela(lista);
+    }
+
+    document.getElementById('campoBusca')
+        .addEventListener('input', filtrarERenderizar);
+    document.getElementById('filtroCategoria')
+        .addEventListener('change', filtrarERenderizar);
+    document.getElementById('filtroStatus')
+        .addEventListener('change', filtrarERenderizar);
+
+    // ── modal ─────────────────────────────────────────────────────
+
+    var modal        = document.getElementById('modalOverlay');
+    var produtoEdicao = null; // referência ao objeto sendo editado
+
+    function abrirModal(modo, prod) {
+        modal.style.display = 'flex';
+        document.getElementById('modalTitulo').textContent =
+            modo === 'novo' ? 'Novo Item' : 'Editar Item';
+
+        if (modo === 'editar' && prod) {
+            produtoEdicao = prod;
+            document.getElementById('mCodigo').value    = prod.codigo;
+            document.getElementById('mNome').value      = prod.nome;
+            document.getElementById('mCategoria').value = prod.categoria;
+            document.getElementById('mEstoque').value   = prod.estoque;
+            document.getElementById('mMinimo').value    = prod.minimo;
+            document.getElementById('mPreco').value     = prod.preco;
+        } else {
+            produtoEdicao = null;
+            document.getElementById('mCodigo').value    = '';
+            document.getElementById('mNome').value      = '';
+            document.getElementById('mCategoria').value = '';
+            document.getElementById('mEstoque').value   = '';
+            document.getElementById('mMinimo').value    = '';
+            document.getElementById('mPreco').value     = '';
+        }
+    }
+
+    function fecharModal() {
+        modal.style.display = 'none';
+    }
+
+    document.getElementById('btnNovoItem')
+        .addEventListener('click', function() { abrirModal('novo'); });
+    document.getElementById('modalFechar')
+        .addEventListener('click', fecharModal);
+    document.getElementById('btnCancelar')
+        .addEventListener('click', fecharModal);
+
+    // fecha clicando fora
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) fecharModal();
+    });
+
+    document.getElementById('btnSalvar').addEventListener('click', async function() {
+    var codigo  = document.getElementById('mCodigo').value.trim();
+    var nome    = document.getElementById('mNome').value.trim();
+    var cat     = document.getElementById('mCategoria').value.trim();
+    var estoque = parseInt(document.getElementById('mEstoque').value);
+    var minimo  = parseInt(document.getElementById('mMinimo').value);
+    var preco   = parseFloat(document.getElementById('mPreco').value);
+
+    if (!nome || isNaN(estoque) || isNaN(preco)) {
+        alert('Preencha nome, estoque e preço corretamente.');
+        return;
+    }
+
+    try {
+        if (produtoEdicao) {
+            await fetch('/produtos/produto', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id_produto: produtoEdicao.id_produto,
+                    nome: nome,
+                    preco_unitario: preco,
+                    quantidade_estoque: estoque
+                })
+            });
+        } else {
+            await fetch('/produtos/produto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    nome: nome,
+                    preco_unitario: preco,
+                    quantidade_estoque: estoque
+                })
+            });
+        }
+
+        fecharModal();
+        await carregarProdutosAPI();
+
+    } catch (error) {
+        console.error(error);
+        alert('Erro ao salvar produto');
+    }
+});
+
+    // ── inicialização ─────────────────────────────────────────────
+    carregarProdutosAPI();
+</script>
+
+</body>
+</html>

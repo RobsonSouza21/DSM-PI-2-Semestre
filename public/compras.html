@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Sistema — Compras</title>
+    <link rel="stylesheet" href="./style/style.css">
+    <link rel="stylesheet icon" href="imagens/image-editor-1780260291978 - Copia.png">
+</head>
+<body>
+
+<div class="aplicacao">
+
+    <div class="cabecalho">
+        <span class="titulo-cabecalho">📦 ERP Sistema</span>
+        <nav class="navegacao">
+            <a href="dashboard.html" class="aba">📊 Dashboard</a>
+            <a href="estoque.html" class="aba">📦 Estoque</a>
+            <a href="compras.html" class="aba ativo">🛒 Compras</a>
+            <a href="vendas.html" class="aba">💰 Vendas</a>
+        </nav>
+        <div class="usuario-cabecalho" id="nomeUsuario">👤 Admin ▾</div>
+    </div>
+
+    <div class="barra-boas-vindas">
+        <div>Gerenciamento de <strong>Compras</strong></div>
+        <button class="btn-sair" id="btnSair">🚪 Sair</button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="cartoes">
+        <div class="cartao cartao-laranja">
+            <div class="cartao-icone">🕐</div>
+            <div>
+                <div class="cartao-label">Pedidos Pendentes</div>
+                <div class="cartao-valor" id="kdPendentes">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-azul">
+            <div class="cartao-icone">✅</div>
+            <div>
+                <div class="cartao-label">Pedidos Aprovados</div>
+                <div class="cartao-valor" id="kdAprovados">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-verde">
+            <div class="cartao-icone">📋</div>
+            <div>
+                <div class="cartao-label">Finalizados</div>
+                <div class="cartao-valor" id="kdFinalizados">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-roxo">
+            <div class="cartao-icone">💰</div>
+            <div>
+                <div class="cartao-label">Total do Mês</div>
+                <div class="cartao-valor" id="kdTotalMes">—</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="painel">
+
+        <div class="barra-ferramentas">
+            <input type="text" id="campoBusca" class="input-busca"
+                   placeholder="🔍  Buscar por número ou fornecedor...">
+            <select id="filtroStatus" class="select-filtro">
+                <option value="">Todos os status</option>
+                <option value="Pendente">Pendentes</option>
+                <option value="Aprovado">Aprovados</option>
+                <option value="Finalizado">Finalizados</option>
+                <option value="Cancelado">Cancelados</option>
+            </select>
+            <button class="btn-novo" id="btnNovoPedido">+ Novo Pedido</button>
+        </div>
+
+        <table class="tabela-dados">
+            <thead>
+                <tr>
+                    <th>Nº PEDIDO</th>
+                    <th>FORNECEDOR</th>
+                    <th>DATA</th>
+                    <th>ITENS</th>
+                    <th>VALOR TOTAL</th>
+                    <th>STATUS</th>
+                    <th>AÇÕES</th>
+                </tr>
+            </thead>
+            <tbody id="tbCompras"></tbody>
+        </table>
+
+        <div class="rodape-painel" id="rodapeCompras"></div>
+    </div>
+
+    <!-- Modal novo pedido -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-caixa">
+            <div class="modal-cabecalho">
+                <span id="modalTitulo">Novo Pedido de Compra</span>
+                <button class="modal-fechar" id="modalFechar">&times;</button>
+            </div>
+            <div class="modal-corpo">
+                <div class="campo">
+                    <label>Fornecedor</label>
+                    <input type="text" id="mFornecedor" placeholder="Nome do fornecedor">
+                </div>
+                <div class="campo">
+                    <label>Data do Pedido</label>
+                    <input type="date" id="mData">
+                </div>
+                <div class="campo">
+                    <label>Quantidade de Itens</label>
+                    <input type="number" id="mItens" placeholder="0" min="1">
+                </div>
+                <div class="campo">
+                    <label>Valor Total (R$)</label>
+                    <input type="number" id="mValor" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <div class="campo">
+                    <label>Status</label>
+                    <select id="mStatus" class="select-filtro" style="width:100%">
+                        <option value="Pendente">Pendente</option>
+                        <option value="Aprovado">Aprovado</option>
+                        <option value="Finalizado">Finalizado</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-rodape">
+                <button class="btn-cancelar" id="btnCancelar">Cancelar</button>
+                <button class="btn-salvar" id="btnSalvar">Criar Pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="rodape-app">
+        ERP Sistema &copy; 2025 — Todos os direitos reservados
+    </footer>
+
+</div>
+
+<script src="js/script.js" defer></script>
+
+</body>
+</html>

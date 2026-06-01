@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Sistema — Vendas</title>
+    <link rel="stylesheet" href="./style/style.css">
+    <link rel="stylesheet icon" href="imagens/image-editor-1780260291978 - Copia.png">
+</head>
+<body>
+
+<div class="aplicacao">
+
+    <header class="cabecalho">
+        <span class="titulo-cabecalho">📦 ERP Sistema</span>
+        <nav class="navegacao">
+            <a href="dashboard.html" class="aba">📊 Dashboard</a>
+            <a href="estoque.html"   class="aba">📦 Estoque</a>
+            <a href="compras.html"   class="aba">🛒 Compras</a>
+            <a href="vendas.html"    class="aba ativo">💰 Vendas</a>
+        </nav>
+        <div class="usuario-cabecalho" id="nomeUsuario">👤 Admin ▾</div>
+    </header>
+
+    <div class="barra-boas-vindas">
+        <div>Gerenciamento de <strong>Vendas</strong></div>
+        <button class="btn-sair" id="btnSair">🚪 Sair</button>
+    </div>
+
+    <!-- KPIs calculados via JS -->
+    <div class="cartoes">
+        <div class="cartao cartao-azul">
+            <div class="cartao-icone">💰</div>
+            <div>
+                <div class="cartao-label">Total de Vendas</div>
+                <div class="cartao-valor" id="kdTotalVendas">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-verde">
+            <div class="cartao-icone">✅</div>
+            <div>
+                <div class="cartao-label">Vendas Concluídas</div>
+                <div class="cartao-valor" id="kdConcluidas">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-laranja">
+            <div class="cartao-icone">🎯</div>
+            <div>
+                <div class="cartao-label">Ticket Médio</div>
+                <div class="cartao-valor" id="kdTicket">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-roxo">
+            <div class="cartao-icone">📦</div>
+            <div>
+                <div class="cartao-label">Itens Vendidos</div>
+                <div class="cartao-valor" id="kdItens">—</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grade-dashboard">
+
+        <!-- formulário de nova venda -->
+        <div class="painel">
+            <div class="titulo-painel">🛒 Registrar Nova Venda</div>
+            <div style="padding: 20px;">
+
+                <div class="campo">
+                    <label for="selProduto">Produto</label>
+                    <select id="selProduto" class="select-filtro"
+                            style="width:100%; padding:10px 14px; font-size:14px;">
+                        <option value="">— selecione um produto —</option>
+                    </select>
+                </div>
+
+                <div class="campo">
+                    <label>Preço Unitário</label>
+                    <input type="text" id="precoUnitario"
+                           style="background:#f5f5f5" disabled>
+                </div>
+
+                <div class="campo">
+                    <label for="qtdVenda">Quantidade</label>
+                    <input type="number" id="qtdVenda"
+                           placeholder="1" min="1" value="1">
+                </div>
+
+                <div class="campo">
+                    <label>Valor Total</label>
+                    <input type="text" id="valorTotal"
+                           style="background:#f5f5f5;font-weight:700;
+                                  color:#0f3460;font-size:16px" disabled>
+                </div>
+
+                <div class="campo">
+                    <label for="clienteVenda">Cliente (opcional)</label>
+                    <input type="text" id="clienteVenda"
+                           placeholder="Nome do cliente">
+                </div>
+
+                <!-- alerta de estoque insuficiente -->
+                <div id="alertaEstoque"
+                     style="display:none;background:#fdecea;border:1px solid
+                            #e74c3c;color:#c0392b;padding:10px 14px;
+                            border-radius:6px;font-size:13px;margin-bottom:12px">
+                    ⚠️ Estoque insuficiente para essa quantidade.
+                </div>
+
+                <button class="btn-novo" id="btnFinalizarVenda"
+                        style="width:100%;padding:12px;font-size:15px">
+                    ✅ Finalizar Venda
+                </button>
+
+            </div>
+        </div>
+
+        <!-- histórico de vendas -->
+        <div class="painel">
+            <div class="titulo-painel">📋 Histórico de Vendas</div>
+
+            <div class="barra-ferramentas" style="padding:12px 16px">
+                <input type="text" id="buscaVenda" class="input-busca"
+                       placeholder="🔍  Buscar por produto ou cliente...">
+                <button class="btn-cancelar" id="btnLimparVendas"
+                        style="white-space:nowrap">🗑️ Limpar histórico</button>
+            </div>
+
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>PRODUTO</th>
+                        <th>CLIENTE</th>
+                        <th>QTD</th>
+                        <th>TOTAL</th>
+                        <th>DATA</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="tbVendas"></tbody>
+            </table>
+
+            <div class="rodape-painel" id="rodapeVendas"></div>
+        </div>
+
+    </div>
+
+    <footer class="rodape-app">
+        ERP Sistema &copy; 2025 — Todos os direitos reservados
+    </footer>
+
+</div>
+
+<script>
+    // proteção de rota
+    var sessaoRaw = localStorage.getItem('erp_usuario')
+                || sessionStorage.getItem('erp_usuario');
+    if (!sessaoRaw) window.location.href = 'index.html';
+
+    var usuario = JSON.parse(sessaoRaw || '{}');
+    document.getElementById('nomeUsuario').textContent =
+        '👤 ' + (usuario.nome || 'Admin') + ' ▾';
+
+    document.getElementById('btnSair').addEventListener('click', function() {
+        if (confirm('Deseja sair do sistema?')) {
+            localStorage.removeItem('erp_usuario');
+            sessionStorage.removeItem('erp_usuario');
+            window.location.href = 'index.html';
+        }
+    });
+
+    // ── carrega dados ─────────────────────────────────────────────
+
+    var CHAVE_ESTOQUE = 'erp_estoque';
+    var CHAVE_VENDAS  = 'erp_vendas';
+
+    var dadosPadraoEstoque = [
+        { codigo: 'NB-001',  nome: 'Notebook Dell Inspiron 15', categoria: 'Informática',   estoque: 45,  minimo: 15, preco: 3499.90 },
+        { codigo: 'MS-002',  nome: 'Mouse Logitech MX Master',   categoria: 'Periféricos',   estoque: 32,  minimo: 20, preco: 449.90  },
+        { codigo: 'TC-003',  nome: 'Teclado Mecânico RGB',       categoria: 'Periféricos',   estoque: 78,  minimo: 25, preco: 699.90  },
+        { codigo: 'MN-004',  nome: 'Monitor LG 27" 4K',          categoria: 'Monitores',     estoque: 28,  minimo: 12, preco: 2199.90 },
+        { codigo: 'WB-005',  nome: 'Webcam Logitech C920',       categoria: 'Periféricos',   estoque: 64,  minimo: 30, preco: 599.90  },
+        { codigo: 'HD-006',  nome: 'Headset HyperX Cloud II',    categoria: 'Áudio',         estoque: 5,   minimo: 15, preco: 549.90  },
+        { codigo: 'SSD-007', nome: 'SSD Samsung 1TB',            categoria: 'Armazenamento', estoque: 8,   minimo: 20, preco: 699.90  },
+        { codigo: 'RAM-008', nome: 'Memória RAM DDR4 16GB',      categoria: 'Componentes',   estoque: 12,  minimo: 25, preco: 449.90  },
+        { codigo: 'HUB-009', nome: 'Hub USB-C 7 Portas',         categoria: 'Acessórios',    estoque: 18,  minimo: 30, preco: 299.90  },
+        { codigo: 'CAB-010', nome: 'Cabo HDMI 2.1 3m',           categoria: 'Cabos',         estoque: 156, minimo: 50, preco: 89.90   }
+    ];
+
+    function carregarEstoque() {
+        var raw = localStorage.getItem(CHAVE_ESTOQUE);
+        return raw ? JSON.parse(raw) : dadosPadraoEstoque;
+    }
+
+    function salvarEstoque(dados) {
+        localStorage.setItem(CHAVE_ESTOQUE, JSON.stringify(dados));
+    }
+
+    function carregarVendas() {
+        var raw = localStorage.getItem(CHAVE_VENDAS);
+        return raw ? JSON.parse(raw) : [];
+    }
+
+    function salvarVendas() {
+        localStorage.setItem(CHAVE_VENDAS, JSON.stringify(vendas));
+    }
+
+    var estoque = [];
+    var vendas  = carregarVendas();
+
+    async function carregarEstoqueAPI() {
+        try {
+            const resposta = await fetch('/produtos/produto');
+            const dados = await resposta.json();
+
+            estoque = dados.map(function(p) {
+                return {
+                    id_produto: p.id_produto,
+                    codigo: String(p.id_produto),
+                    nome: p.nome,
+                    categoria: 'Geral',
+                    estoque: Number(p.quantidade_estoque),
+                    minimo: 5,
+                    preco: Number(p.preco_unitario)
+                };
+            });
+
+            popularSelect();
+
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao carregar produtos do banco');
+        }
+    }
+
+    // ── helpers ───────────────────────────────────────────────────
+
+    function moeda(v) {
+        return Number(v).toLocaleString('pt-BR', {
+            style: 'currency', currency: 'BRL'
+        });
+    }
+
+    function dataHoje() {
+        return new Date().toLocaleDateString('pt-BR');
+    }
+
+    // ── preenche select de produtos ───────────────────────────────
+
+    function popularSelect() {
+        var sel = document.getElementById('selProduto');
+        // mantém só a opção padrão
+        while (sel.options.length > 1) sel.remove(1);
+
+        for (var i = 0; i < estoque.length; i++) {
+            var p  = estoque[i];
+            var op = document.createElement('option');
+            op.value       = i; // índice no array
+            op.textContent = p.nome + ' — ' + moeda(p.preco) +
+                             (p.estoque === 0 ? ' [SEM ESTOQUE]' : ' (estoque: ' + p.estoque + ')');
+            if (p.estoque === 0) op.disabled = true;
+            sel.appendChild(op);
+        }
+    }
+
+    // ── calcula valor ao selecionar produto ou mudar quantidade ──
+
+    document.getElementById('selProduto').addEventListener('change', calcularTotal);
+    document.getElementById('qtdVenda').addEventListener('input', calcularTotal);
+
+    function calcularTotal() {
+        var sel = document.getElementById('selProduto');
+        var idx = parseInt(sel.value);
+        var qtd = parseInt(document.getElementById('qtdVenda').value) || 0;
+        var alertaEl = document.getElementById('alertaEstoque');
+
+        if (isNaN(idx) || sel.value === '') {
+            document.getElementById('precoUnitario').value = '';
+            document.getElementById('valorTotal').value    = '';
+            alertaEl.style.display = 'none';
+            return;
+        }
+
+        var prod = estoque[idx];
+        document.getElementById('precoUnitario').value =
+            moeda(prod.preco);
+
+        // verifica estoque
+        if (qtd > prod.estoque) {
+            alertaEl.style.display = 'block';
+            document.getElementById('valorTotal').value = '—';
+        } else {
+            alertaEl.style.display = 'none';
+            document.getElementById('valorTotal').value =
+                moeda(prod.preco * qtd);
+        }
+    }
+
+    // ── finaliza venda ────────────────────────────────────────────
+
+    document.getElementById('btnFinalizarVenda').addEventListener('click', async function() {
+        var sel     = document.getElementById('selProduto');
+        var idx     = parseInt(sel.value);
+        var qtd     = parseInt(document.getElementById('qtdVenda').value);
+        var cliente = document.getElementById('clienteVenda').value.trim() || 'Consumidor Final';
+
+        if (isNaN(idx) || sel.value === '') {
+            alert('Selecione um produto.');
+            return;
+        }
+
+        if (!qtd || qtd <= 0) {
+            alert('Informe uma quantidade válida.');
+            return;
+        }
+
+        var prod = estoque[idx];
+
+        if (qtd > prod.estoque) {
+            alert('Estoque insuficiente!\nDisponível: ' + prod.estoque + ' unidade(s).');
+            return;
+        }
+
+        var total = prod.preco * qtd;
+
+        try {
+            await fetch('/produtos/venda', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    data_venda: new Date().toISOString().split('T')[0],
+                    valor_total: total,
+                    id_usuario: 1,
+                    produtos: [
+                        {
+                            id_produto: prod.id_produto,
+                            quantidade_vendida: qtd,
+                            preco_praticado: prod.preco
+                        }
+                    ]
+                })
+            });
+
+            var novaVenda = {
+                numero:   vendas.length + 1,
+                produto:  prod.nome,
+                cliente:  cliente,
+                qtd:      qtd,
+                total:    total,
+                data:     dataHoje(),
+                status:   'Concluída'
+            };
+
+            vendas.unshift(novaVenda);
+            salvarVendas();
+
+            sel.value = '';
+            document.getElementById('qtdVenda').value = '1';
+            document.getElementById('precoUnitario').value = '';
+            document.getElementById('valorTotal').value = '';
+            document.getElementById('clienteVenda').value = '';
+            document.getElementById('alertaEstoque').style.display = 'none';
+
+            await carregarEstoqueAPI();
+            atualizarKPIs();
+            renderizarHistorico();
+
+            var btn = document.getElementById('btnFinalizarVenda');
+            btn.textContent = '✓ Venda registrada!';
+            btn.style.background = '#27ae60';
+
+            setTimeout(function() {
+                btn.textContent = '✅ Finalizar Venda';
+                btn.style.background = '';
+            }, 2000);
+
+        } catch (error) {
+            console.error(error);
+            alert('Erro ao registrar venda');
+        }
+    });
+
+    // ── KPIs ──────────────────────────────────────────────────────
+
+    function atualizarKPIs() {
+        var totalVendas = 0;
+        var totalItens  = 0;
+
+        for (var i = 0; i < vendas.length; i++) {
+            totalVendas += vendas[i].total;
+            totalItens  += vendas[i].qtd;
+        }
+
+        var ticket = vendas.length > 0 ? totalVendas / vendas.length : 0;
+
+        document.getElementById('kdTotalVendas').textContent = moeda(totalVendas);
+        document.getElementById('kdConcluidas').textContent  = vendas.length;
+        document.getElementById('kdTicket').textContent      = moeda(ticket);
+        document.getElementById('kdItens').textContent       = totalItens;
+    }
+
+    // ── histórico de vendas ───────────────────────────────────────
+
+    function renderizarHistorico() {
+        var busca = document.getElementById('buscaVenda').value.toLowerCase();
+        var tb    = document.getElementById('tbVendas');
+        tb.innerHTML = '';
+
+        var lista = [];
+        for (var i = 0; i < vendas.length; i++) {
+            var v = vendas[i];
+            var matchBusca = !busca ||
+                v.produto.toLowerCase().indexOf(busca) >= 0 ||
+                v.cliente.toLowerCase().indexOf(busca) >= 0;
+            if (matchBusca) lista.push(v);
+        }
+
+        if (lista.length === 0) {
+            tb.innerHTML =
+                '<tr><td colspan="7" style="text-align:center;' +
+                'padding:30px;color:#aaa">Nenhuma venda encontrada.</td></tr>';
+            document.getElementById('rodapeVendas').textContent = '';
+            return;
+        }
+
+        for (var i = 0; i < lista.length; i++) {
+            var v = lista[i];
+            tb.innerHTML +=
+                '<tr>' +
+                '<td><strong>#' + String(v.numero).padStart(3, '0') + '</strong></td>' +
+                '<td>' + v.produto + '</td>' +
+                '<td>' + v.cliente + '</td>' +
+                '<td>' + v.qtd + '</td>' +
+                '<td class="texto-azul">' + moeda(v.total) + '</td>' +
+                '<td>' + v.data + '</td>' +
+                '<td><span class="etiqueta-verde">Concluída</span></td>' +
+                '</tr>';
+        }
+
+        var totalFiltrado = 0;
+        for (var i = 0; i < lista.length; i++) totalFiltrado += lista[i].total;
+
+        document.getElementById('rodapeVendas').innerHTML =
+            '<strong>' + lista.length + '</strong> venda(s) &nbsp;|&nbsp;' +
+            ' Total: <strong>' + moeda(totalFiltrado) + '</strong>';
+    }
+
+    document.getElementById('buscaVenda')
+        .addEventListener('input', renderizarHistorico);
+
+    // limpar histórico
+    document.getElementById('btnLimparVendas').addEventListener('click', function() {
+        if (confirm('Tem certeza que deseja limpar todo o histórico de vendas?\nEssa ação não pode ser desfeita.')) {
+            vendas = [];
+            salvarVendas();
+            atualizarKPIs();
+            renderizarHistorico();
+        }
+    });
+
+    // ── inicialização ─────────────────────────────────────────────
+    carregarEstoqueAPI();
+    atualizarKPIs();
+    renderizarHistorico();
+</script>
+
+</body>
+</html>

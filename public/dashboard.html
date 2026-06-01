@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Sistema — Dashboard</title>
+    <link rel="stylesheet" href="./style/style.css">
+    <link rel="stylesheet icon" href="imagens/image-editor-1780260291978 - Copia.png">
+</head>
+<body>
+
+<div class="aplicacao">
+
+    <header class="cabecalho">
+        <span class="titulo-cabecalho">📦 ERP Sistema</span>
+        <nav class="navegacao">
+            <a href="dashboard.html" class="aba ativo">📊 Dashboard</a>
+            <a href="estoque.html"   class="aba">📦 Estoque</a>
+            <a href="compras.html"   class="aba">🛒 Compras</a>
+            <a href="vendas.html"    class="aba">💰 Vendas</a>
+        </nav>
+        <div class="usuario-cabecalho" id="nomeUsuario">👤 Admin ▾</div>
+    </header>
+
+    <div class="barra-boas-vindas">
+        <div>
+            <span id="saudacao">Olá</span>,
+            <strong id="nomeExibido">Administrador</strong>!
+            &nbsp;<span class="data-atual" id="dataAtual"></span>
+        </div>
+        <button class="btn-sair" id="btnSair">🚪 Sair</button>
+    </div>
+
+    <!-- cards de resumo -->
+    <div class="cartoes">
+        <div class="cartao cartao-azul">
+            <div class="cartao-icone">💰</div>
+            <div>
+                <div class="cartao-label">Valor em Estoque</div>
+                <div class="cartao-valor" id="kdValor">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-verde">
+            <div class="cartao-icone">📦</div>
+            <div>
+                <div class="cartao-label">Produtos em Estoque</div>
+                <div class="cartao-valor" id="kdProdutos">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-laranja">
+            <div class="cartao-icone">🛒</div>
+            <div>
+                <div class="cartao-label">Pedidos Pendentes</div>
+                <div class="cartao-valor" id="kdPedidos">—</div>
+            </div>
+        </div>
+        <div class="cartao cartao-vermelho">
+            <div class="cartao-icone">⚠️</div>
+            <div>
+                <div class="cartao-label">Abaixo do Mínimo</div>
+                <div class="cartao-valor" id="kdCriticos">—</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- painéis -->
+    <div class="grade-dashboard">
+
+        <div class="painel">
+            <div class="titulo-painel">📈 Vendas Mensais</div>
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>MÊS</th>
+                        <th>VENDAS</th>
+                        <th>PEDIDOS</th>
+                        <th>TICKET MÉDIO</th>
+                    </tr>
+                </thead>
+                <tbody id="tbVendas"></tbody>
+            </table>
+            <div class="rodape-painel">
+                Acumulado: <strong id="totalVendas">—</strong>
+            </div>
+        </div>
+
+        <div class="painel">
+            <div class="titulo-painel">📅 Movimentação Semanal</div>
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>DATA</th>
+                        <th>ENTRADAS</th>
+                        <th>SAÍDAS</th>
+                        <th>SALDO</th>
+                    </tr>
+                </thead>
+                <tbody id="tbMovimentacao"></tbody>
+            </table>
+        </div>
+
+        <div class="painel">
+            <div class="titulo-painel">🔄 Últimas Movimentações</div>
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>PRODUTO</th>
+                        <th>TIPO</th>
+                        <th>QTD</th>
+                        <th>DATA</th>
+                    </tr>
+                </thead>
+                <tbody id="tbRecentes"></tbody>
+            </table>
+        </div>
+
+        <div class="painel">
+            <div class="titulo-painel">🚨 Estoque Crítico</div>
+            <table class="tabela-dados">
+                <thead>
+                    <tr>
+                        <th>PRODUTO</th>
+                        <th>ATUAL</th>
+                        <th>MÍNIMO</th>
+                        <th>STATUS</th>
+                    </tr>
+                </thead>
+                <tbody id="tbCriticos"></tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <footer class="rodape-app">
+        ERP Sistema &copy; 2025 — Todos os direitos reservados
+    </footer>
+
+</div>
+
+<script>
+    // verifica se tem sessão ativa, senão manda pro login
+    var sessaoRaw = localStorage.getItem('erp_usuario')
+                || sessionStorage.getItem('erp_usuario');
+    if (!sessaoRaw) {
+        window.location.href = 'index.html';
+    }
+
+    var usuario = JSON.parse(sessaoRaw || '{}');
+
+    // preenche nome no cabeçalho e boas-vindas
+    document.getElementById('nomeUsuario').textContent =
+        '👤 ' + (usuario.nome || 'Admin') + ' ▾';
+    document.getElementById('nomeExibido').textContent =
+        usuario.nome || 'Administrador';
+
+    // saudação de acordo com o horário
+    var hora = new Date().getHours();
+    var saudacao = hora < 12 ? 'Bom dia'
+                 : hora < 18 ? 'Boa tarde'
+                 : 'Boa noite';
+    document.getElementById('saudacao').textContent = saudacao;
+
+    // data por extenso
+    document.getElementById('dataAtual').textContent =
+        new Date().toLocaleDateString('pt-BR', {
+            weekday: 'long',
+            day:     '2-digit',
+            month:   'long',
+            year:    'numeric'
+        });
+
+    // botão sair — limpa sessão e volta pro login
+    document.getElementById('btnSair').addEventListener('click', function() {
+        if (confirm('Deseja realmente sair do sistema?')) {
+            localStorage.removeItem('erp_usuario');
+            sessionStorage.removeItem('erp_usuario');
+            window.location.href = 'index.html';
+        }
+    });
+
+    // ── dados do dashboard ────────────────────────────────────────
+
+    var vendasMensais = [
+        { mes: 'Janeiro',   valor: 43000, pedidos: 249 },
+        { mes: 'Fevereiro', valor: 52000, pedidos: 276 },
+        { mes: 'Março',     valor: 48000, pedidos: 251 },
+        { mes: 'Abril',     valor: 61000, pedidos: 312 },
+        { mes: 'Maio',      valor: 55000, pedidos: 289 }
+    ];
+
+    var movSemanal = [
+        { data: '27/04/2026', entradas: 120, saidas: 95  },
+        { data: '28/04/2026', entradas: 85,  saidas: 110 },
+        { data: '29/04/2026', entradas: 140, saidas: 95  },
+        { data: '30/04/2026', entradas: 85,  saidas: 110 },
+        { data: '01/05/2026', entradas: 100, saidas: 75  }
+    ];
+
+    var movRecentes = [
+        { produto: 'Notebook Dell Inspiron', tipo: 'Entrada', qtd: 15,  data: '01/05/2026' },
+        { produto: 'Mouse Logitech MX',      tipo: 'Saída',   qtd: -9,  data: '01/05/2026' },
+        { produto: 'Teclado Mecânico RGB',   tipo: 'Entrada', qtd: 25,  data: '30/04/2026' },
+        { produto: 'Monitor LG 27" 4K',      tipo: 'Saída',   qtd: -17, data: '30/04/2026' },
+        { produto: 'Webcam Logitech C920',   tipo: 'Entrada', qtd: 30,  data: '29/04/2026' }
+    ];
+
+    var criticos = [
+        { produto: 'Headset HyperX Cloud II', atual: 5,  minimo: 15 },
+        { produto: 'SSD Samsung 1TB',         atual: 8,  minimo: 20 },
+        { produto: 'Memória RAM DDR4 16GB',   atual: 12, minimo: 25 },
+        { produto: 'Hub USB-C 7 Portas',      atual: 18, minimo: 30 }
+    ];
+
+    // ── helper de formatação ──────────────────────────────────────
+
+    function moeda(v) {
+        return Number(v).toLocaleString('pt-BR', {
+            style:    'currency',
+            currency: 'BRL'
+        });
+    }
+
+    // ── preenche KPIs ─────────────────────────────────────────────
+
+    // pega dados de estoque e compras salvos no localStorage, se existirem
+    var estoqueSalvo  = JSON.parse(localStorage.getItem('erp_estoque')  || '[]');
+    var comprasSalvas = JSON.parse(localStorage.getItem('erp_compras')  || '[]');
+
+    var valorEstoque = estoqueSalvo.length > 0
+        ? estoqueSalvo.reduce(function(s, p) { return s + p.preco * p.estoque; }, 0)
+        : 487350;
+
+    var totalProdutos = estoqueSalvo.length > 0
+        ? estoqueSalvo.reduce(function(s, p) { return s + p.estoque; }, 0)
+        : 1247;
+
+    var pedidosPendentes = comprasSalvas.length > 0
+        ? comprasSalvas.filter(function(p) { return p.status === 'Pendente'; }).length
+        : 23;
+
+    var abaixoMinimo = estoqueSalvo.length > 0
+        ? estoqueSalvo.filter(function(p) { return p.estoque < p.minimo; }).length
+        : 12;
+
+    document.getElementById('kdValor').textContent    = moeda(valorEstoque);
+    document.getElementById('kdProdutos').textContent = totalProdutos.toLocaleString('pt-BR');
+    document.getElementById('kdPedidos').textContent  = pedidosPendentes;
+    document.getElementById('kdCriticos').textContent = abaixoMinimo;
+
+    // ── tabela vendas mensais ─────────────────────────────────────
+
+    var tbV = document.getElementById('tbVendas');
+    var somaVendas = 0;
+
+    for (var i = 0; i < vendasMensais.length; i++) {
+        var v = vendasMensais[i];
+        somaVendas += v.valor;
+        var ticket = v.valor / v.pedidos;
+
+        tbV.innerHTML +=
+            '<tr>' +
+            '<td>' + v.mes + '</td>' +
+            '<td class="texto-azul">' + moeda(v.valor) + '</td>' +
+            '<td>' + v.pedidos + '</td>' +
+            '<td>' + moeda(ticket) + '</td>' +
+            '</tr>';
+    }
+
+    document.getElementById('totalVendas').textContent = moeda(somaVendas);
+
+    // ── tabela movimentação semanal ───────────────────────────────
+
+    var tbM = document.getElementById('tbMovimentacao');
+
+    for (var i = 0; i < movSemanal.length; i++) {
+        var m = movSemanal[i];
+        var saldo = m.entradas - m.saidas;
+        var clsSaldo = saldo >= 0 ? 'texto-verde' : 'texto-vermelho';
+        var sinalSaldo = saldo >= 0 ? '+' : '';
+
+        tbM.innerHTML +=
+            '<tr>' +
+            '<td>' + m.data + '</td>' +
+            '<td class="texto-verde">+' + m.entradas + '</td>' +
+            '<td class="texto-vermelho">-' + m.saidas + '</td>' +
+            '<td class="' + clsSaldo + '">' + sinalSaldo + saldo + '</td>' +
+            '</tr>';
+    }
+
+    // ── tabela movimentações recentes ─────────────────────────────
+
+    var tbR = document.getElementById('tbRecentes');
+
+    for (var i = 0; i < movRecentes.length; i++) {
+        var r = movRecentes[i];
+        var badge = r.tipo === 'Entrada'
+            ? '<span class="etiqueta-verde">Entrada</span>'
+            : '<span class="etiqueta-vermelha">Saída</span>';
+        var clsQtd  = r.qtd > 0 ? 'texto-verde' : 'texto-vermelho';
+        var sinalQtd = r.qtd > 0 ? '+' : '';
+
+        tbR.innerHTML +=
+            '<tr>' +
+            '<td>' + r.produto + '</td>' +
+            '<td>' + badge + '</td>' +
+            '<td class="' + clsQtd + '">' + sinalQtd + r.qtd + '</td>' +
+            '<td>' + r.data + '</td>' +
+            '</tr>';
+    }
+
+    // ── tabela estoque crítico ────────────────────────────────────
+
+    var tbC = document.getElementById('tbCriticos');
+
+    for (var i = 0; i < criticos.length; i++) {
+        var c = criticos[i];
+        var urgente = c.atual <= 10;
+        var badge   = urgente
+            ? '<span class="etiqueta-urgente">Urgente</span>'
+            : '<span class="etiqueta-atencao">Atenção</span>';
+        var clsAtual = urgente ? 'texto-vermelho' : 'texto-laranja';
+
+        tbC.innerHTML +=
+            '<tr>' +
+            '<td>' + c.produto + '</td>' +
+            '<td class="' + clsAtual + '">' + c.atual + '</td>' +
+            '<td>' + c.minimo + '</td>' +
+            '<td>' + badge + '</td>' +
+            '</tr>';
+    }
+</script>
+
+</body>
+</html>
